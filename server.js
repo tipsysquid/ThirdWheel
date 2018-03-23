@@ -11,6 +11,7 @@ var config = require('./config/config.local.js');
 var db_conf = config.db;
 var db;
 const MongoClient = require('mongodb').MongoClient;
+var debug = config.debug;
 
 var app = express();
 var port = 3000;
@@ -18,11 +19,17 @@ var port = 3000;
 app.use(bodyParser.json({limit: '5mb'}));
 app.use(bodyParser.urlencoded({extended : true}));
 
+var testdata = {
+    'name':'test',
+    'email':'test@test.com',
+    'password':'notsecure'
+};
 
 
 app.get('/', function(req, res){
     res.json({"message": "Ready."});
 });
+
 
 MongoClient.connect(db_conf.url, (err, client) => {
     if(err){
@@ -32,37 +39,76 @@ MongoClient.connect(db_conf.url, (err, client) => {
         return console.log(err);
     }
     db = client.db('app'); 
-
-       
-
-
     http.createServer(app).listen(port, function(){
         console.log("Server on port "+port);
-        testWriteMongo();
-        testReadMongo();
+        var deferred = Q.defer();
+
+        if(debug){
+            testWriteMongo(testdata)
+            .then(function(res){
+                testReadMongo(testdata)
+                .then(function(res){
+                    console.log("Sucessfully read from db");
+                    deferred.resolve(res);
+                })
+                .fail(function(err){
+                    deferred.reject(err);
+                });
+            })
+            .fail(function(err){
+                deferred.reject(err);
+            });
+        }
+        return deferred.promise;
     });
+
 });
 
 /**
  * Quick function to test that mongo is connected
  * and it prints one of the documents saved
  */
-function testReadMongo(){
-    db.collection('users').find()
-    .toArray(function(err, results){
-        console.log(results);
-    });     
+function testReadMongo(lookup,callback){
+    var deferred = Q.defer();
+    db.collection('users').find(lookup)
+    .toArray(function(err,result){
+        if(err){
+            console.log(err);
+            deferred.reject(err);
+        }
+        else{
+            //console.log(result);
+            deferred.resolve(result);
+        }
+    });
+
+    // .toArray(function(err, results){
+    //     if(err){
+    //         console.log(err);
+    //         deferred.reject(err);
+    //     }
+    //     else{
+    //         console.log(results);
+    //         deferred.resolve(results);
+    //     }
+    // });
+    
+    deferred.promise.nodeify(callback);
+    return deferred.promise;     
 }
 
-function testWriteMongo(){
-    db.collection('users').save({
-        'name':'test',
-        'email':'test@test.com',
-        'password':'notsecure'
-    }, (err, result) => {
+function testWriteMongo(testdata,callback){
+    var deferred = Q.defer();
+    db.collection('users').save(testdata, (err, result) => {
         if(err){
-            return console.log(err);
+            console.log(err);
+            deferred.reject(err);
         }
-        console.log('saved to database');
+        else{
+            console.log("saved to database");
+            deferred.resolve(result);
+        }
     });
+    deferred.promise.nodeify(callback);
+    return deferred.promise;
 }
