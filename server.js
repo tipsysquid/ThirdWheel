@@ -31,37 +31,21 @@ app.get('/', function(req, res){
 });
 
 
-MongoClient.connect(db_conf.url, (err, client) => {
-    if(err){
-        if(err.name == 'MongoNetworkError'){
-            console.log("Are you sure mongodb is running?");
-        }
-        return console.log(err);
-    }
-    db = client.db('app'); 
+MongoClient.connect(db_conf.url)
+.then(function(client){
+    db = client.db('app');
     http.createServer(app).listen(port, function(){
-        console.log("Server on port "+port);
-        var deferred = Q.defer();
-
+        console.log("Server on port: "+port);
         if(debug){
-            testWriteMongo(testdata)
-            .then(function(res){
-                testReadMongo(testdata)
-                .then(function(res){
-                    console.log("Sucessfully read from db");
-                    deferred.resolve(res);
-                })
-                .fail(function(err){
-                    deferred.reject(err);
-                });
-            })
-            .fail(function(err){
-                deferred.reject(err);
-            });
+            tests();
         }
-        return deferred.promise;
     });
-
+})
+.catch(function(exception){
+    if(exception.name == 'MongoNetworkError'){
+        console.log("Are you sure mongodb is running?");
+    }
+    return console.log(err); 
 });
 
 /**
@@ -70,45 +54,72 @@ MongoClient.connect(db_conf.url, (err, client) => {
  */
 function testReadMongo(lookup,callback){
     var deferred = Q.defer();
-    db.collection('users').find(lookup)
-    .toArray(function(err,result){
-        if(err){
-            console.log(err);
-            deferred.reject(err);
-        }
-        else{
-            //console.log(result);
-            deferred.resolve(result);
-        }
-    });
-
-    // .toArray(function(err, results){
-    //     if(err){
-    //         console.log(err);
-    //         deferred.reject(err);
-    //     }
-    //     else{
-    //         console.log(results);
-    //         deferred.resolve(results);
-    //     }
-    // });
+    
+    db.collection('users').find(lookup).toArray()
+    .then(function(res){
+        console.log("find from database");
+        deferred.resolve(res);
+    })
+    .catch(function(exception){
+        console.log(exception);
+        deferred.reject(exception);
+    })
     
     deferred.promise.nodeify(callback);
     return deferred.promise;     
 }
 
+/**
+ * Simple test to insertOne into Mongodb
+ * @param {data to write} testdata 
+ * @param {*} callback 
+ */
 function testWriteMongo(testdata,callback){
     var deferred = Q.defer();
-    db.collection('users').save(testdata, (err, result) => {
-        if(err){
-            console.log(err);
-            deferred.reject(err);
-        }
-        else{
-            console.log("saved to database");
-            deferred.resolve(result);
-        }
+    db.collection('users').insertOne(testdata)
+    .then(function(res){
+        console.log("insertOne to database");
+        deferred.resolve(res);
+    })
+    .catch(function(exception){
+        console.log(exception);
+        deferred.reject(exception);
     });
     deferred.promise.nodeify(callback);
     return deferred.promise;
+}
+
+/**
+ * Test function
+ * @param {} callback 
+ */
+function tests(callback){
+    var deferred = Q.defer();
+
+    if(debug){
+        testWriteMongo(testdata)
+        .then(function(res){
+            var inner_deferred = Q.defer();
+            console.log("Successfully wrote to db");
+            testReadMongo(testdata)
+            .then(function(res){
+                console.log("Sucessfully read from db");
+                inner_deferred.resolve(res);
+            })
+            .fail(function(err){
+                inner_deferred.reject(err);
+            });
+            return inner_deferred.promise;
+        })
+        .fail(function(err){
+            deferred.reject(err);
+        })
+        .finally(function(){
+            console.log("Tests completed");
+            deferred.resolve();
+        });
+    }
+    deferred.promise.nodeify(callback);
+    return deferred.promise;
+
 }
