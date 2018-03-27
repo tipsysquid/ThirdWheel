@@ -3,7 +3,7 @@
 // ================
 
 //IMPORT MODULES
-var http = require('http'); // create server with http module
+var http = require('http'); // create server with http module so that we can https later
 var express = require('express'); //handle routing and server details
 var bodyParser = require('body-parser'); //body paring middleware
 var Q = require('q');
@@ -11,6 +11,8 @@ var config = require('./config/config.local.js');
 var db_conf = config.db;
 var db;
 const MongoClient = require('mongodb').MongoClient;
+const mongoose = require('mongoose');
+
 var debug = config.debug;
 
 var app = express();
@@ -29,7 +31,15 @@ var testdata = {
 app.get('/', function(req, res){
     res.json({"message": "Ready."});
 });
+addRoutes();
 
+mongoose.connect(db_conf.url)
+.then(function(mongoose){
+    mongoose.connection.on('error',console.log)
+})
+.catch(function(ex){
+    console.log(ex);
+});
 
 MongoClient.connect(db_conf.url)
 .then(function(client){
@@ -51,7 +61,8 @@ MongoClient.connect(db_conf.url)
     if(exception.name == 'MongoNetworkError'){
         console.log("Are you sure mongodb is running?");
     }
-    return console.log(exception); 
+    console.log(exception);
+    process.exit(); 
 });
 
 /**
@@ -127,4 +138,9 @@ function tests(callback){
     deferred.promise.nodeify(callback);
     return deferred.promise;
 
+}
+
+function addRoutes(){
+    require('./app/routes/account.routes.js')(app);
+    console.log("Added Routes");
 }
