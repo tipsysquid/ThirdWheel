@@ -37,7 +37,13 @@ MongoClient.connect(db_conf.url)
     http.createServer(app).listen(port, function(){
         console.log("Server on port: "+port);
         if(debug){
-            tests();
+            tests()
+            .then(function(res){
+                console.log("Tests completed: Success");
+            })
+            .catch(function(exception){
+                console.log("Tests completed: Failure");
+            });
         }
     });
 })
@@ -45,7 +51,7 @@ MongoClient.connect(db_conf.url)
     if(exception.name == 'MongoNetworkError'){
         console.log("Are you sure mongodb is running?");
     }
-    return console.log(err); 
+    return console.log(exception); 
 });
 
 /**
@@ -115,7 +121,6 @@ function tests(callback){
             deferred.reject(err);
         })
         .finally(function(){
-            console.log("Tests completed");
             deferred.resolve();
         });
     }
