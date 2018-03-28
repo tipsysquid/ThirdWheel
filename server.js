@@ -66,8 +66,15 @@ function connectMongo(){
 function startServer(){
     var deferred = Q.defer();
     http.createServer(app).listen(port, function(){
-        deferred.resolve(connectMongo());
-        console.log("Server listening on port: "+port);
+        connectMongo()
+        .then(function(db){
+            console.log("Server listening on port: "+port);
+            deferred.resolve(db);
+        })
+        .catch(function(ex){
+            console.log(ex);
+            process.exit();
+        });
     });
     return deferred.promise;
 }
