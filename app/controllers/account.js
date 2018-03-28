@@ -2,6 +2,7 @@ const crypto = require('crypto');
 var Q = require('q');
 var mongoose = require('mongoose');
 var Account = mongoose.model('Account');
+const server_token = '662fc8d3-1067-46e2-a28d-c52900e76078';
 
 
 exports.create = function(req, res, callback){
@@ -140,9 +141,15 @@ exports.login = function(req, res, callback){
         else{
             cryptoCompare(saved_account[0], client_password)
             .then(function(isAuth){
-                inner_deferred.resolve(
-                    res.status(200).send({message:"Login Success!"})
-                );
+                if(req.server_token && req.server_token == server_token){
+                    inner_deferred.resolve(saved_account[0]);
+                }
+                else{
+                    inner_deferred.resolve(
+                        res.status(200).send({message:"Login Success!"})
+                    );
+                }
+
             })
             .catch(function(ex){
                 inner_deferred.reject(
@@ -152,6 +159,12 @@ exports.login = function(req, res, callback){
         }
         return inner_deferred.promise;
     })
+    .then(function(login){
+        deferred.resolve(login);
+    })
+    .catch(function(ex){
+        deferred.reject(ex);
+    });
 
 
     deferred.promise.nodeify(callback);
