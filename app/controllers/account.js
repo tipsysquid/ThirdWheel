@@ -7,14 +7,20 @@ var Account = mongoose.model('Account');
 exports.create = function(req, res, callback){
     var deferred = Q.defer();
     if(!req.body){
-        return res.status(400).send({message:"No account data"});
+        deferred.reject(
+            res.status(400).send({message:"No account data"})
+        );
     }
 
     if(!req.body.email){
-        return res.status(400).send({message:"Email address required"});
+        deferred.reject(
+            res.status(400).send({message:"Email address required"})
+        );
     }
     if(!req.body.password){
-        return res.status(400).send({message:"Password required to create an account"});
+        deferred.reject(
+            res.status(400).send({message:"Password required to create an account"})
+        );
     }
 
     var client_password = req.body.password;
