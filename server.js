@@ -8,6 +8,8 @@ var express = require('express'); //handle routing and server details
 var bodyParser = require('body-parser'); //body paring middleware
 var Q = require('q');
 var config = require('./config/config.local.js');
+const uuidv4 = require('uuid/v4'); //random
+const server_token = uuidv4();
 var db_conf = config.db;
 var db;
 //const MongoClient = require('mongodb').MongoClient;
@@ -20,6 +22,7 @@ var port = 3000;
 
 app.use(bodyParser.json({limit: '5mb'}));
 app.use(bodyParser.urlencoded({extended : true}));
+app.set('server_token',server_token);
 
 addRoutes()
 .then(function(){
@@ -33,9 +36,10 @@ addRoutes()
 
 function addRoutes(){
     var deferred = Q.defer();
-
-    deferred.resolve(require('./app/routes/account.routes.js')(app));
-    console.log("Added Routes");
+    require('./app/routes/account.routes.js')(app)
+    require('./app/routes/key.routes.js')(app);
+    
+    deferred.resolve(console.log("Added Routes"));
 
     return deferred.promise;
 }
