@@ -10,7 +10,7 @@ var Q = require('q');
 var config = require('./config/config.local.js');
 var db_conf = config.db;
 var db;
-const MongoClient = require('mongodb').MongoClient;
+//const MongoClient = require('mongodb').MongoClient;
 const mongoose = require('mongoose');
 
 var debug = config.debug;
@@ -21,49 +21,96 @@ var port = 3000;
 app.use(bodyParser.json({limit: '5mb'}));
 app.use(bodyParser.urlencoded({extended : true}));
 
-var testdata = {
-    'name':'test',
-    'email':'test@test.com',
-    'password':'notsecure'
-};
-
-
-app.get('/', function(req, res){
-    res.json({"message": "Ready."});
-});
-addRoutes();
-
-mongoose.connect(db_conf.url)
-.then(function(mongoose){
-    mongoose.connection.on('error',console.log)
+addRoutes()
+.then(function(){
+    startServer()
 })
 .catch(function(ex){
+    console.log("ERROR");
     console.log(ex);
-});
-
-MongoClient.connect(db_conf.url)
-.then(function(client){
-    db = client.db('app');
-    http.createServer(app).listen(port, function(){
-        console.log("Server on port: "+port);
-        if(debug){
-            tests()
-            .then(function(res){
-                console.log("Tests completed: Success");
-            })
-            .catch(function(exception){
-                console.log("Tests completed: Failure");
-            });
-        }
-    });
 })
-.catch(function(exception){
-    if(exception.name == 'MongoNetworkError'){
-        console.log("Are you sure mongodb is running?");
-    }
-    console.log(exception);
-    process.exit(); 
-});
+
+
+function addRoutes(){
+    var deferred = Q.defer();
+
+    deferred.resolve(require('./app/routes/account.routes.js')(app));
+    console.log("Added Routes");
+
+    return deferred.promise;
+}
+
+/**
+ * Returns mongoose connection object
+ */
+function connectMongo(){
+    var deferred = Q.defer();
+    mongoose.connect(db_conf.url)
+    .then(function(mongoose){
+        var connection = mongoose.connection;
+        console.log("Connected to MongoDb");
+        deferred.resolve(connection);
+    })
+    .catch(function(ex){
+        console.log("Unable to connect to mongo. Terminating.")
+        deferred.reject(ex);
+    });
+    return deferred.promise;
+}
+
+/**
+ * Start our HTTP server, begin listening 
+ * on the configured port,
+ * then connect to our mongo instance with mongoose
+ */
+function startServer(){
+    var deferred = Q.defer();
+    http.createServer(app).listen(port, function(){
+        deferred.resolve(connectMongo());
+        console.log("Server listening on port: "+port);
+    });
+    return deferred.promise;
+}
+
+
+
+/*==============================
+========DEPRECATED==============
+================================*/
+
+/**
+ * This was the original way I was connection
+ * to my mongodb as I was refamiliarizing myself with mongo
+ */
+function oldServerConfig(){
+    app.get('/', function(req, res){
+        res.json({"message": "Ready."});
+    });
+    
+    MongoClient.connect(db_conf.url)
+    .then(function(client){
+        db = client.db('app');
+        http.createServer(app).listen(port, function(){
+            console.log("Server on port: "+port);
+            if(debug){
+                tests()
+                .then(function(res){
+                    console.log("Tests completed: Success");
+                })
+                .catch(function(exception){
+                    console.log("Tests completed: Failure");
+                });
+            }
+        });
+    })
+    .catch(function(exception){
+        if(exception.name == 'MongoNetworkError'){
+            console.log("Are you sure mongodb is running?");
+        }
+        console.log(exception);
+        process.exit(); 
+    });
+}
 
 /**
  * Quick function to test that mongo is connected
@@ -138,9 +185,4 @@ function tests(callback){
     deferred.promise.nodeify(callback);
     return deferred.promise;
 
-}
-
-function addRoutes(){
-    require('./app/routes/account.routes.js')(app);
-    console.log("Added Routes");
 }
