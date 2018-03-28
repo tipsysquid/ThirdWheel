@@ -26,7 +26,7 @@ addRoutes()
     startServer()
 })
 .catch(function(ex){
-    console.log("ERROR");
+    console.log('ERROR');
     console.log(ex);
 })
 
