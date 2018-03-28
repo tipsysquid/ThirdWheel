@@ -70,7 +70,11 @@ exports.create = function(req, res, callback){
     })
     .then(function(saved_account){
         delete saved_account.salt;
-        deferred.resolve(res.status(200).send(saved_account));
+        var res_account = {
+            email:saved_account.email,
+            created_at:saved_account.created_at
+        };
+        deferred.resolve(res.status(200).send(res_account));
     })
     .catch(function(ex){
         if(+(ex.code) == 11000){
@@ -96,7 +100,7 @@ exports.create = function(req, res, callback){
     return deferred.promise;
 };
 
-exports.signIn = function(req, res, callback){
+exports.login = function(req, res, callback){
     var deferred = Q.defer();
 
     if(!req.body){
@@ -114,9 +118,33 @@ exports.signIn = function(req, res, callback){
             res.status(400).send({message:"Password required"})
         );
     }
-    findAccount(email)
-    .then(function(saved_account){
 
+    var client_password = req.body.password;
+    var client_email = req.body.email;
+
+    findAccount(client_email)
+    .then(function(saved_account){
+        var inner_deferred = Q.defer();
+        //TODO we need more logic gates here, but it is okay for now
+        if(saved_account.length > 1){
+            inner_deferred.reject(
+                res.status(500).send({message:"Too many accounts with this email address"})
+            );
+        }
+        else{
+            cryptoCompare(saved_account[0], client_password)
+            .then(function(isAuth){
+                inner_deferred.resolve(
+                    res.status(200).send({message:"Login Success!"})
+                );
+            })
+            .catch(function(ex){
+                inner_deferred.reject(
+                    res.status(400).send({message:"Login Failed."})
+                );
+            });
+        }
+        return inner_deferred.promise;
     })
 
 
@@ -189,7 +217,7 @@ function findAccount(email, callback){
         email:email
     });
     
-    account.findOne(account)
+    Account.find({email:email})
     .then(function(saved_account){
         var inner_deferred = Q.defer();
         inner_deferred.resolve(saved_account);
@@ -206,9 +234,33 @@ function findAccount(email, callback){
     return deferred.promise;
 }
 
-function cryptoCompare(saved_account, password, callback){
+function cryptoCompare(saved_account, client_password, callback){
     var deferred = Q.defer();
-
+    if(saved_account && saved_account.salt){
+        hashPassword(saved_account.salt, client_password)
+        .then(function(password_data){
+            var inner_deferred = Q.defer();
+            var password_buf = Buffer.from(saved_account.password, 'utf-8');
+            var hashed_pass_buf = Buffer.from(password_data.hashed_password, 'utf-8');
+            var equal = crypto.timingSafeEqual(password_buf, hashed_pass_buf);
+            if(equal){
+                inner_deferred.resolve(equal);
+            }
+            else{
+                inner_deferred.reject(equal);
+            }
+            return inner_deferred.promise;
+        })
+        .then(function(equal){
+            deferred.resolve(equal);
+        })
+        .catch(function(err){
+            deferred.reject(err);
+        });
+    }
+    else{
+        deferred.reject({message:"Your account is broken"});
+    }
     deferred.promise.nodeify(callback);
     return deferred.promise;
 }
