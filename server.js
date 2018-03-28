@@ -34,20 +34,21 @@ addRoutes()
 })
 
 
-function addRoutes(){
+function addRoutes(callback){
     var deferred = Q.defer();
     require('./app/routes/account.routes.js')(app)
     require('./app/routes/key.routes.js')(app);
     
     deferred.resolve(console.log("Added Routes"));
 
+    deferred.promise.nodeify(callback);
     return deferred.promise;
 }
 
 /**
  * Returns mongoose connection object
  */
-function connectMongo(){
+function connectMongo(callback){
     var deferred = Q.defer();
     mongoose.connect(db_conf.url)
     .then(function(mongoose){
@@ -59,6 +60,7 @@ function connectMongo(){
         console.log("Unable to connect to mongo. Terminating.")
         deferred.reject(ex);
     });
+    deferred.promise.nodeify(callback);
     return deferred.promise;
 }
 
@@ -67,7 +69,7 @@ function connectMongo(){
  * on the configured port,
  * then connect to our mongo instance with mongoose
  */
-function startServer(){
+function startServer(callback){
     var deferred = Q.defer();
     http.createServer(app).listen(port, function(){
         connectMongo()
@@ -80,6 +82,7 @@ function startServer(){
             process.exit();
         });
     });
+    deferred.promise.nodeify(callback);
     return deferred.promise;
 }
 
