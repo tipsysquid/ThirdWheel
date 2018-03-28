@@ -5,5 +5,7 @@ module.exports = function(app) {
     //create new account
     app.post('/accounts/create', accounts.create);
 
+    //Login with existing account
+    app.post('/login', accounts.login);
 
 }
