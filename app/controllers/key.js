@@ -90,7 +90,7 @@ exports.verifyMessage = function(req, res, callback){
         var verify = crypto.createVerify('sha256');
 
         //Updates the verifier object with data.
-        verifier.update(key);
+        verifier.verify(message, key['256'])
         
     })
     
