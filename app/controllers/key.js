@@ -71,6 +71,9 @@ exports.addKey = function(req, res, callback){
  */
 exports.verifyMessage = function(req, res, callback){
     var deferred = Q.defer();
+    const message = req.body.message;
+
+
 
     /**
      * Skipping some essential validation for now
@@ -83,6 +86,11 @@ exports.verifyMessage = function(req, res, callback){
     .then(function(saved_account){
         //the account is valid, check the message
         // against the key
+        const key = saved_account.key;
+        var verify = crypto.createVerify('sha256');
+
+        //Updates the verifier object with data.
+        verifier.update(key);
         
     })
     
