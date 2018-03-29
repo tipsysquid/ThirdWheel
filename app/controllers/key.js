@@ -55,6 +55,42 @@ exports.addKey = function(req, res, callback){
     return deferred.promise;
 }
 
+/**
+ * This function accepts a signed message 
+ * and returns a boolean on whether or not 
+ * a particular email address owns the 
+ * given public key.
+ * This function works much like a
+ * privacy focused 
+ * password authentication function
+ * in that it will not reveal whether or not 
+ * a particular email is valid.
+ * @param {} req 
+ * @param {*} res 
+ * @param {*} callback 
+ */
+exports.verifyMessage = function(req, res, callback){
+    var deferred = Q.defer();
+
+    /**
+     * Skipping some essential validation for now
+     *
+     */
+
+    //first confirm that this email address exists via login 
+    account.findAccount
+    authAccount(req, res)
+    .then(function(saved_account){
+        //the account is valid, check the message
+        // against the key
+        
+    })
+    
+
+    deferred.promise.nodeify(callback);
+    return deferred.promise;
+}
+
 function authAccount(req, res, callback){
     var deferred = Q.defer();
     req.server_token = server_token;
