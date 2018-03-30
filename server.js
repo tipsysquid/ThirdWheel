@@ -8,8 +8,6 @@ var express = require('express'); //handle routing and server details
 var bodyParser = require('body-parser'); //body paring middleware
 var Q = require('q');
 var config = require('./config/config.local.js');
-const uuidv4 = require('uuid/v4'); //random
-const server_token = uuidv4();
 var db_conf = config.db;
 var db;
 //const MongoClient = require('mongodb').MongoClient;
