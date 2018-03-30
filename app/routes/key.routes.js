@@ -4,5 +4,5 @@ module.exports = function(app) {
 
     app.post('/key/add', keys.addKey);
 
-    app.post('/key/verisig', keys.verifySignature);
+    app.post('/key/verisig', keys.verifyMessage);
 }

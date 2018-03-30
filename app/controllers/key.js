@@ -31,7 +31,7 @@ exports.addKey = function(req, res, callback){
     })
     .then(function(saved_account){
         var inner_deferred = Q.defer();
-        createKey(saved_account, client_obs)
+        saveKey(saved_account, client_obs)
         .then(function(saved_key){
             inner_deferred.resolve(saved_key);
         })
@@ -72,7 +72,7 @@ exports.addKey = function(req, res, callback){
 exports.verifyMessage = function(req, res, callback){
     var deferred = Q.defer();
     const message = req.body.message;
-
+    var svd_acc;
 
 
     /**
@@ -81,18 +81,49 @@ exports.verifyMessage = function(req, res, callback){
      */
 
     //first confirm that this email address exists via login 
-    account.findAccount
+    //account.findAccount
     authAccount(req, res)
     .then(function(saved_account){
-        //the account is valid, check the message
-        // against the key
-        const key = saved_account.key;
-        var verify = crypto.createVerify('sha256');
-
-        //Updates the verifier object with data.
-        verifier.verify(message, key['256'])
-        
+        //the account is valid, retrieve the key belonging to the account       
+        var inner_deferred = Q.defer();
+        retrieveKey(saved_account)
+        .then(function(saved_key){
+            var accun
+            inner_deferred.resolve(saved_key);
+        })
+        .catch(function(ex){
+            inner_deferred.reject(ex);
+        })
+        return inner_deferred.promise
     })
+    .then(function(saved_key){
+    
+        var inner_deferred = Q.defer();
+        verification(saved_key,message)
+        .then(function(verification){
+            inner_deferred.resolve(verification);
+        })
+        .catch(function(ex){
+            inner_deferred.reject(ex);
+        });
+        return inner_deferred.promise;
+    })
+    .then(function(verification){
+        var status = {
+            message: message,
+            key: svd_acc.key,
+            verification:verification
+        };
+
+        deferred.resolve(
+            res.status(200).send(status)
+        );
+    })
+    .catch(function(ex){
+        deferred.reject(
+            res.status(400).send(ex)
+        );
+    });
     
 
     deferred.promise.nodeify(callback);
@@ -164,7 +195,7 @@ function verifyAddKeyInputs(req, res, callback){
  * @param {*} auth_account 
  * @param {*} client_obs 
  */
-function createKey(auth_account, client_obs, callback){
+function saveKey(auth_account, client_obs, callback){
     var deferred = Q.defer();
 
     var key = new Key({
@@ -179,6 +210,42 @@ function createKey(auth_account, client_obs, callback){
     })
     .catch(function(ex){
         deferred.reject(JSON.stringify(ex));
+    });
+
+    deferred.promise.nodeify(callback);
+    return deferred.promise;
+}
+
+function verification(key, message, callback){
+    var deferred = Q.defer();
+
+    var verifier = crypto.createVerify('sha256');
+    verifier.update(message);
+
+    //Updates the verifier object with data.
+    const verified = verifier.verify(message, key);
+    deferred.resolve(verified);
+
+    deferred.promise.nodeify(callback);
+    return deferred.promise;
+}
+
+/**
+ * Find the key belonging to the account
+ * in which you wish to verify a message for 
+ * @param {*} saved_account 
+ * @param {*} callback 
+ */
+function retrieveKey(saved_account, callback){
+    var deferred = Q.defer();
+
+    Key.find({account:saved_account})
+    .then(function(key_account){
+        //take the 0th of the array
+        deferred.resolve(key_account[0].key);
+    })
+    .catch(function(ex){
+        deferred.reject(ex);
     });
 
     deferred.promise.nodeify(callback);
