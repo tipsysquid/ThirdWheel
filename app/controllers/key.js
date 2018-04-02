@@ -130,6 +130,33 @@ exports.verifyMessage = function(req, res, callback){
     return deferred.promise;
 }
 
+/**
+ * 
+ * 
+ * @param {*} req 
+ * @param {*} res 
+ * @param {*} callback 
+ */
+exports.createKey = function(req, res, callback){
+    var deferred = Q.defer();
+
+    //
+    crypto.pbkdf2('secret','salt', 100000, 64, 'sha512', 
+    (err, derived_key) => {
+        var inner_deferred = Q.defer();
+        if(err) inner_deferred.reject(err);
+        //deferred.resolve(derived_key);
+        const dh = crypto.createDiffieHellman(derived_key);
+        const keys = dh.generateKeys();
+        const priv_key = dh.getPrivateKey();
+        const pub_key = dh.getPublicKey();
+        return inner_deferred.promise;
+    });
+
+    deferred.promise.nodeify(callback);
+    return deferred.promise;
+}
+
 function authAccount(req, res, callback){
     var deferred = Q.defer();
     req.server_token = server_token;
