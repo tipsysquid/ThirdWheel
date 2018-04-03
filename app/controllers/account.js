@@ -4,7 +4,13 @@ var mongoose = require('mongoose');
 var Account = mongoose.model('Account');
 const server_token = '662fc8d3-1067-46e2-a28d-c52900e76078';
 
-
+/**
+ * Accepts an email and password field.
+ * The email address must be unique.
+ * @param {*} req 
+ * @param {*} res 
+ * @param {*} callback 
+ */
 exports.create = function(req, res, callback){
     var deferred = Q.defer();
     if(!req.body){
@@ -107,6 +113,14 @@ exports.create = function(req, res, callback){
     return deferred.promise;
 };
 
+/**
+ * Accepts an email and password field. 
+ * This endpoint isn't necessary to use, as the other endpoints
+ * hit this endpoint first as an authenticator
+ * @param {*} req 
+ * @param {*} res 
+ * @param {*} callback 
+ */
 exports.login = function(req, res, callback){
     var deferred = Q.defer();
 
@@ -229,6 +243,12 @@ function createSaltBuffer(callback){
     return deferred.promise;
 }
 
+/**
+ * Using the mongoose Accounts model schema,
+ * we can query a specific document type 
+ * @param {*} email 
+ * @param {*} callback 
+ */
 function findAccount(email, callback){
     var deferred = Q.defer();
 
@@ -252,7 +272,13 @@ function findAccount(email, callback){
     deferred.promise.nodeify(callback);
     return deferred.promise;
 }
-
+/**
+ * Verifies the user submitted password against the 
+ * hashed and salted passwored in the database
+ * @param {*} saved_account 
+ * @param {*} client_password 
+ * @param {*} callback 
+ */
 function cryptoCompare(saved_account, client_password, callback){
     var deferred = Q.defer();
     if(saved_account && saved_account.salt){

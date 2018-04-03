@@ -13,8 +13,7 @@ var KeySchema = new mongoose.Schema({
     },
     key: {
         type: String,
-        required: true,
-        unique:true
+        required: true
     },
     created_at: {
         type: String,

@@ -1,3 +1,25 @@
 Simple api backed by mongo
 
 This is a demo application. WIP.
+
+"Create account"
+/accounts/create
+	email:String(unique)
+	password:String
+
+"Add Key to account"
+/key/add
+	email:String(unique)
+	password:String
+	key:String
+
+"Create key for a specific account"
+/key/create
+	email:String(unique)
+	password:String
+
+"Verify the signature of a message belongs to a particular account."
+/key/verisig
+	email:String(unique)
+	password:String
+	message:String

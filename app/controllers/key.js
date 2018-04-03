@@ -5,6 +5,14 @@ var Key = mongoose.model('Key');
 var account = require('../controllers/account.js');
 const server_token = '662fc8d3-1067-46e2-a28d-c52900e76078';
 
+/**
+ * Authenticates a user by email and password,
+ * then on the key field accepts a string as a key for a user's account.
+ * This key will be used to verify messages later.
+ * @param {*} req 
+ * @param {*} res 
+ * @param {*} callback 
+ */
 exports.addKey = function(req, res, callback){
     var deferred = Q.defer();
     var client_obs;
@@ -131,7 +139,8 @@ exports.verifyMessage = function(req, res, callback){
 }
 
 /**
- * 
+ * WIP.
+ * Want to be able to create a key here to use for adding a key later.
  * 
  * @param {*} req 
  * @param {*} res 
@@ -140,23 +149,45 @@ exports.verifyMessage = function(req, res, callback){
 exports.createKey = function(req, res, callback){
     var deferred = Q.defer();
 
-    //
-    crypto.pbkdf2('secret','salt', 100000, 64, 'sha512', 
-    (err, derived_key) => {
-        var inner_deferred = Q.defer();
-        if(err) inner_deferred.reject(err);
-        //deferred.resolve(derived_key);
-        const dh = crypto.createDiffieHellman(derived_key);
-        const keys = dh.generateKeys();
-        const priv_key = dh.getPrivateKey();
-        const pub_key = dh.getPublicKey();
-        return inner_deferred.promise;
-    });
+    /**
+     * My idea was that I wanted to be able to generate 
+     * type equivalent keys.
+     * What type of public key are we working with?
+     * 
+     * partially related: can we create a reproducable 
+     * keypair based on a seed?
+     */
+    try{
+        crypto.pbkdf2('secret','salt', 100000, 64, 'sha512', 
+        (err, derived_key) => {
+            var inner_deferred = Q.defer();
+            if(err) inner_deferred.reject(err);
+            //deferred.resolve(derived_key);
+            const dh = crypto.createDiffieHellman(derived_key);
+            const keys = dh.generateKeys();
+            const priv_key = dh.getPrivateKey();
+            const pub_key = dh.getPublicKey();
+            return inner_deferred.promise;
+        });
+    }
+    catch(ex){
+        deferred.reject(
+            res.status(400).send({message:"Unable to create key"})
+        )
+    }
+ 
 
     deferred.promise.nodeify(callback);
     return deferred.promise;
 }
 
+/**
+ * Authenticate the account credentials 
+ * before we release details about the existence of a key.
+ * @param {} req 
+ * @param {*} res 
+ * @param {*} callback 
+ */
 function authAccount(req, res, callback){
     var deferred = Q.defer();
     req.server_token = server_token;
@@ -182,6 +213,12 @@ function authAccount(req, res, callback){
     return deferred.promise;
 }
 
+/**
+ * email, password, key
+ * @param {*} req 
+ * @param {*} res 
+ * @param {*} callback 
+ */
 function verifyAddKeyInputs(req, res, callback){
     var deferred = Q.defer();
     if(!req.body){
@@ -218,7 +255,8 @@ function verifyAddKeyInputs(req, res, callback){
 }
 
 /**
- * 
+ * Using the mongoose key model,
+ * save a Key document to the database
  * @param {*} auth_account 
  * @param {*} client_obs 
  */
@@ -242,7 +280,14 @@ function saveKey(auth_account, client_obs, callback){
     deferred.promise.nodeify(callback);
     return deferred.promise;
 }
-
+/**
+ * WIP
+ * Be able to verify that a particular message
+ * is signed by a specific user.
+ * @param {*} key 
+ * @param {*} message 
+ * @param {*} callback 
+ */
 function verification(key, message, callback){
     var deferred = Q.defer();
 
