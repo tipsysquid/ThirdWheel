@@ -192,13 +192,14 @@ exports.createKey = function(req, res, callback){
 exports.createKeyV2 = function(req, res, callback){
     var deferred = Q.defer();
     var auth_account;
+    var generated_keys;
     //skipping verifying if info is there. 
 
     authAccount(req,res)
     .then(function(auth_acc){
         auth_account = auth_acc;
         try{
-            const dh = crypto.createDiffieHellman(2048);
+            const dh = crypto.createDiffieHellman(128);
             console.log('created diffiehellmen');
             return dh;
         }
@@ -225,26 +226,38 @@ exports.createKeyV2 = function(req, res, callback){
         Once we save the pub_key of the user
         we will return the priv key for the user to safe guard.
         */
-       saveKey(auth_account,keys.pub_key)
-       .then(function(saved_key){
-           return;
+       generated_keys = keys;
+       delete keys;
+       var inner_deferred = Q.defer();
+       try{
+        saveKey(auth_account,keys.pub_key)
+        .then(function(saved_key){
+            inner_deferred.resolve(saved_key);
         })
-       .catch(function(ex){
-         deferred.reject(ex);
-       });
-       return keys;
+        .catch(function(ex){
+            inner_deferred.reject(ex);
+        });
+       }
+       catch(ex){
+           inner_deferred.reject(ex);
+       }
+      
+       return inner_deferred.promsise;
 
     })
-    .then(function(keys){
+    .then(function(saved_key){
         deferred.resolve(
             res.status(200).send({
-                message:'This is your private key, carefully secure it',
-                priv_key:keys.priv_key
+                message:'This is your private key, carefully secure it. This is the only copy.',
+                priv_key:generated_keys.priv_key
             })
         );
     })
     .catch(function(ex){
         deferred.reject(res.status(400).send(ex));
+    })
+    .finally(function(end){
+        delete generated_keys;
     });
     
 
