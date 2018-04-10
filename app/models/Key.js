@@ -9,11 +9,12 @@ var KeySchema = new mongoose.Schema({
         ref: "Account",
         required: true,
         trim: true,
-        unique: true
+        unique: false
     },
     key: {
-        type: String,
-        required: true
+        type: Buffer,
+        required: true,
+        unique: false
     },
     created_at: {
         type: String,

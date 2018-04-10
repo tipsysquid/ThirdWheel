@@ -181,6 +181,12 @@ exports.createKey = function(req, res, callback){
     return deferred.promise;
 }
 
+exports.createKeyV2 = function(req, res, callback){
+    var client_email = req.email;
+    var client_password = req.password;
+    
+}
+
 /**
  * Authenticate the account credentials 
  * before we release details about the existence of a key.
@@ -265,7 +271,7 @@ function saveKey(auth_account, client_obs, callback){
 
     var key = new Key({
         account:auth_account,
-        key:client_obs.client_key,
+        key:new Buffer(client_obs.client_key),
         created_at:(new Date()).toUTCString()
     });
     key.save(key)
