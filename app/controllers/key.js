@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const assert = require('assert');
 var Q = require('q');
 var mongoose = require('mongoose');
 var Key = mongoose.model('Key');
@@ -181,10 +182,74 @@ exports.createKey = function(req, res, callback){
     return deferred.promise;
 }
 
+/**
+ * Using the crypto DiffieHellman, create a public private key pair.
+ * Save the public key to the database. Return the private key to the user. 
+ * @param {} req 
+ * @param {*} res 
+ * @param {*} callback 
+ */
 exports.createKeyV2 = function(req, res, callback){
-    var client_email = req.email;
-    var client_password = req.password;
+    var deferred = Q.defer();
+    var auth_account;
+    //skipping verifying if info is there. 
+
+    authAccount(req,res)
+    .then(function(auth_acc){
+        auth_account = auth_acc;
+        try{
+            const dh = crypto.createDiffieHellman(2048);
+            console.log('created diffiehellmen');
+            return dh;
+        }
+        catch(ex){
+            console.log(ex);
+            deferred.reject(res.status(500).send('Unable to create key'));
+        }
+        
+    })
+    .then(function(dh){
+        //generateKeys() should return the public key as a buffer
+        const pub_key = dh.generateKeys();
+        const priv_key = dh.getPrivateKey('hex');
+        const keys = {
+            pub_key:pub_key,
+            priv_key:priv_key
+        };
+        delete pub_key, priv_key;
+        //return the pub_key and priv_key
+        return keys;
+    })
+    .then(function(keys){
+        /*Let's save our public key.
+        Once we save the pub_key of the user
+        we will return the priv key for the user to safe guard.
+        */
+       saveKey(auth_account,keys.pub_key)
+       .then(function(saved_key){
+           return;
+        })
+       .catch(function(ex){
+         deferred.reject(ex);
+       });
+       return keys;
+
+    })
+    .then(function(keys){
+        deferred.resolve(
+            res.status(200).send({
+                message:'This is your private key, carefully secure it',
+                priv_key:keys.priv_key
+            })
+        );
+    })
+    .catch(function(ex){
+        deferred.reject(res.status(400).send(ex));
+    });
     
+
+    deferred.promise.nodeify(callback);
+    return deferred.promise;
 }
 
 /**
@@ -262,16 +327,17 @@ function verifyAddKeyInputs(req, res, callback){
 
 /**
  * Using the mongoose key model,
- * save a Key document to the database
+ * save a Key document to the database.
+ * Returns the key obj.
  * @param {*} auth_account 
- * @param {*} client_obs 
+ * @param {Buffer} key 
  */
-function saveKey(auth_account, client_obs, callback){
+function saveKey(auth_account, key, callback){
     var deferred = Q.defer();
 
     var key = new Key({
         account:auth_account,
-        key:new Buffer(client_obs.client_key),
+        key:new Buffer(key),
         created_at:(new Date()).toUTCString()
     });
     key.save(key)

@@ -4,7 +4,7 @@ module.exports = function(app) {
 
     app.post('/key/add', keys.addKey);
 
-    app.post('/key/create', keys.createKey);
+    app.post('/key/create', keys.createKeyV2);
 
     app.post('/key/verisig', keys.verifyMessage);
 }
