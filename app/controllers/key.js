@@ -80,7 +80,8 @@ exports.addKey = function(req, res, callback){
  */
 exports.verifyMessage = function(req, res, callback){
     var deferred = Q.defer();
-    const message = req.body.message;
+    const msg = req.body.msg;
+    const sig = req.body.sig;
     var svd_acc;
 
 
@@ -108,7 +109,7 @@ exports.verifyMessage = function(req, res, callback){
     .then(function(saved_key){
     
         var inner_deferred = Q.defer();
-        verification(saved_key,message)
+        verification(saved_key,msg,sig)
         .then(function(verification){
             inner_deferred.resolve(verification);
         })
@@ -119,7 +120,7 @@ exports.verifyMessage = function(req, res, callback){
     })
     .then(function(verification){
         var status = {
-            message: message,
+            msg: msg,
             key: svd_acc.key,
             verification:verification
         };
